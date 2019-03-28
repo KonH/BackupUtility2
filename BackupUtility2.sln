@@ -5,7 +5,12 @@ VisualStudioVersion = 16.0.28714.193
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleRunner", "ConsoleRunner\ConsoleRunner.csproj", "{ED3EC5CE-1E56-4A0C-81CD-3EED2CF25F44}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackupUtility", "BackupUtility\BackupUtility.csproj", "{8DB408FC-45A6-4E6E-93D6-564C3507BC42}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BackupUtility", "BackupUtility\BackupUtility.csproj", "{8DB408FC-45A6-4E6E-93D6-564C3507BC42}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6AA1B8C2-A042-47E6-A050-8194C1218FBE}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
