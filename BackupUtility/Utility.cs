@@ -1,22 +1,28 @@
 ﻿using System;
+using Microsoft.Extensions.Logging;
 
 namespace BackupUtility {
-	public sealed class Utility {
-		readonly Config _config;
+	sealed class Utility {
+		readonly ILoggerFactory _loggerFactory;
+		readonly Config         _config;
 
-		public Utility(Config config) {
-			_config = config;
+		public Utility(ILoggerFactory loggerFactory, Config config) {
+			_loggerFactory = loggerFactory;
+			_config        = config;
 		}
 
 		public void Process() {
-			Console.WriteLine($"[ BackupUtility: {_config.Pathes.Count} tasks ]");
+			var logger = _loggerFactory.CreateLogger<Utility>();
+			var startTime = DateTime.Now;
+			logger.LogInformation($"Started at {startTime}");
+			logger.LogInformation($"{_config.Pathes.Count} tasks\n");
 			foreach ( var pair in _config.Pathes ) {
 				var from = pair.Key;
 				var to = pair.Value;
-				Console.WriteLine();
-				Console.WriteLine($"[ '{from}' => '{to}' ]");
-				new Runner(from, to, _config.HistoryDepth).Process();
+				new Runner(_loggerFactory, from, to, _config.HistoryDepth).Process();
 			}
+			var endTime = DateTime.Now;
+			logger.LogInformation($"Finished at {endTime} (elapsed: {endTime - startTime})");
 		}
 	}
 }

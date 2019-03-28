@@ -2,9 +2,13 @@
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 
 namespace BackupUtility {
 	sealed class Runner {
+		readonly ILoggerFactory _loggerFactory;
+		readonly ILogger        _logger;
+
 		readonly string _sourcePath;
 		readonly string _destinationPath;
 		readonly int    _historyDepth;
@@ -14,7 +18,9 @@ namespace BackupUtility {
 
 		Dictionary<string, CachedFileInfo> _cache => _cacheWrapper.Data;
 
-		public Runner(string sourcePath, string destinationPath, int historyDepth) {
+		public Runner(ILoggerFactory loggerFactory, string sourcePath, string destinationPath, int historyDepth) {
+			_loggerFactory   = loggerFactory;
+			_logger          = loggerFactory.CreateLogger<Runner>();
 			_sourcePath      = sourcePath;
 			_destinationPath = destinationPath;
 			_historyDepth    = historyDepth;
@@ -26,19 +32,17 @@ namespace BackupUtility {
 				var allTasks = GetFiles(_sourcePath).Select(ToTask).ToList();
 
 				var (wantedTasks, savedTasks) = allTasks.Split(t => t.IsRequired);
-				Console.WriteLine($"[ Files to backup: {wantedTasks.AsDetails()} ]");
-				Console.WriteLine($"[ Saved by caching: {savedTasks.AsDetails()} ]");
-				Console.WriteLine();
+				_logger.LogInformation($"'{_sourcePath}' => '{_destinationPath}'");
+				_logger.LogInformation($"Files to backup: {wantedTasks.AsDetails()}");
+				_logger.LogInformation($"Saved by caching: {savedTasks.AsDetails()}\n");
 
-				_tracker = new ProgressTracker(wantedTasks.SumByLength());
+				_tracker = new ProgressTracker(_loggerFactory, wantedTasks.SumByLength());
 
 				var results = wantedTasks.Select(Execute).ToList();
 				var (success, errors) = results.Split(t => t.IsSuccess);
 
-				Console.WriteLine();
-				Console.WriteLine($"[ Backup finished for {success.AsDetails()} ]");
-				Console.WriteLine($"[ Backup failed for {errors.AsDetails()} ]");
-				Console.WriteLine();
+				_logger.LogInformation($"Backup finished for {success.AsDetails()}");
+				_logger.LogInformation($"Backup failed for {errors.AsDetails()}\n");
 			}
 		}
 
@@ -75,9 +79,7 @@ namespace BackupUtility {
 				task.IsSuccess = true;
 				Save(task);
 			} catch ( Exception e ) {
-				Console.WriteLine();
-				Console.WriteLine($"\"{task.RelativePath}\": {e}");
-				Console.WriteLine();
+				_logger.LogError($"\"{task.RelativePath}\": {e}\n");
 			}
 			_tracker.UpdateProgress(task.File.Length);
 			return task;
@@ -96,7 +98,7 @@ namespace BackupUtility {
 			var lastWriteTime = new FileInfo(path).LastWriteTimeUtc.ToFileTimeUtc();
 			var destPath      = Path.Combine(historyDirPath, $"{fileName}.{lastWriteTime}");
 			File.Move(path, destPath);
-			Console.WriteLine($"'{path}': previous version saved to history at '{destPath}'");
+			_logger.LogInformation($"'{path}': previous version saved to history at '{destPath}'\n");
 
 			CleanUpHistory(historyDirPath);
 		}
@@ -108,7 +110,7 @@ namespace BackupUtility {
 				return;
 			}
 			var filesToDelete = files.Take(deleteCount).ToList();
-			Console.WriteLine($"'{path}': remove {deleteCount} of {files.Count} files from history.");
+			_logger.LogInformation($"'{path}': remove {deleteCount} of {files.Count} files from history.\n");
 			if ( deleteCount == files.Count ) {
 				Directory.Delete(path, true);
 				return;
