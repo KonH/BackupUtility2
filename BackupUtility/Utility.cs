@@ -15,7 +15,7 @@ namespace BackupUtility {
 				var to = pair.Value;
 				Console.WriteLine();
 				Console.WriteLine($"[ '{from}' => '{to}' ]");
-				new Runner(from, to).Process();
+				new Runner(from, to, _config.HistoryDepth).Process();
 			}
 		}
 	}

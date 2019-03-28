@@ -7,15 +7,17 @@ namespace BackupUtility {
 	sealed class Runner {
 		readonly string _sourcePath;
 		readonly string _destinationPath;
+		readonly int    _historyDepth;
 
 		ProgressTracker _tracker;
 		CacheWrapper   _cacheWrapper;
 
 		Dictionary<string, CachedFileInfo> _cache => _cacheWrapper.Data;
 
-		public Runner(string sourcePath, string destinationPath) {
+		public Runner(string sourcePath, string destinationPath, int historyDepth) {
 			_sourcePath      = sourcePath;
 			_destinationPath = destinationPath;
+			_historyDepth    = historyDepth;
 		}
 
 		public void Process() {
@@ -33,6 +35,7 @@ namespace BackupUtility {
 				var results = wantedTasks.Select(Execute).ToList();
 				var (success, errors) = results.Split(t => t.IsSuccess);
 
+				Console.WriteLine();
 				Console.WriteLine($"[ Backup finished for {success.AsDetails()} ]");
 				Console.WriteLine($"[ Backup failed for {errors.AsDetails()} ]");
 				Console.WriteLine();
@@ -93,6 +96,24 @@ namespace BackupUtility {
 			var lastWriteTime = new FileInfo(path).LastWriteTimeUtc.ToFileTimeUtc();
 			var destPath      = Path.Combine(historyDirPath, $"{fileName}.{lastWriteTime}");
 			File.Move(path, destPath);
+			Console.WriteLine($"'{path}': previous version saved to history at '{destPath}'");
+
+			CleanUpHistory(historyDirPath);
+		}
+
+		void CleanUpHistory(string path) {
+			var files = new DirectoryInfo(path).GetFiles().OrderBy(f => f.LastWriteTimeUtc).ToList();
+			var deleteCount = Math.Max(files.Count - _historyDepth, 0);
+			if ( deleteCount == 0 ) {
+				return;
+			}
+			var filesToDelete = files.Take(deleteCount).ToList();
+			Console.WriteLine($"'{path}': remove {deleteCount} of {files.Count} files from history.");
+			if ( deleteCount == files.Count ) {
+				Directory.Delete(path, true);
+				return;
+			}
+			filesToDelete.ForEach(f => f.Delete());
 		}
 
 		void EnsureDirectory(string path) {
